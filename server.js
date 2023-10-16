@@ -14,6 +14,7 @@ connectDB();
 
 // Route files
 const bootcamps = require('./routes/bootcamps');
+const courses = require('./routes/courses');
 // const { connect } = require('mongoose');
 
 // Intialize app with Express
@@ -32,6 +33,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // Mount routers
 app.use('/api/v1/bootcamps', bootcamps);
+app.use('/api/v1/courses', courses);
 
 // Error handiling middleware (has to be executed after bootcamps controller methods)
 app.use(errorHandler);
