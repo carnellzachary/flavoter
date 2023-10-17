@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const morgan = require('morgan');
 const colors = require('colors');
 const fileupload = require('express-fileupload');
+const cookieParser = require('cookie-parser');
 const errorHandler = require('./middleware/error');
 const connectDB = require('./config/db');
 // const logger = require('./middleware/logger');
@@ -17,13 +18,17 @@ connectDB();
 // Route files
 const bootcamps = require('./routes/bootcamps');
 const courses = require('./routes/courses');
-// const { connect } = require('mongoose');
+const auth = require('./routes/auth');
+
 
 // Intialize app with Express
 const app = express();
 
 // Body parser
 app.use(express.json());
+
+// Cookie parser
+app.use(cookieParser());
 
 // Mount logger
 // app.use(logger);
@@ -42,6 +47,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Mount routers
 app.use('/api/v1/bootcamps', bootcamps);
 app.use('/api/v1/courses', courses);
+app.use('/api/v1/auth', auth);
 
 // Error handiling middleware (has to be executed after bootcamps controller methods)
 app.use(errorHandler);
