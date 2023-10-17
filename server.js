@@ -5,9 +5,15 @@ const morgan = require('morgan');
 const colors = require('colors');
 const fileupload = require('express-fileupload');
 const cookieParser = require('cookie-parser');
+const mongoSanitize = require('express-mongo-sanitize');
+const helmet = require('helmet');
+const xss = require('xss-clean');
+const rateLimit = require('express-rate-limit');
+const hpp = require('hpp');
 const errorHandler = require('./middleware/error');
 const connectDB = require('./config/db');
 // const logger = require('./middleware/logger');
+// Also used CORS package to make public API useable by other domains, but not including that for now
 
 // Load env vars found in the config file (before connecting to database)
 dotenv.config({ path: './config/config.env' });
@@ -41,6 +47,26 @@ if (process.env.NODE_ENV === 'development') {
 
 // File uploading middleware
 app.use(fileupload());
+
+// Sanitize data
+app.use(mongoSanitize());
+
+// Set security headers
+app.use(helmet());
+
+// Prevent cross-site scripting attacks
+app.use(xss());
+
+// Rate limiting (Max 100 requests every 10 mins)
+const limiter = rateLimit({
+    windowMs: 10 * 60 * 1000, // 10 minutes
+    max: 100
+});
+
+app.use(limiter);
+
+// Prevent HTTP param pollution
+app.use(hpp());
 
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public')));
