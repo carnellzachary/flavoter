@@ -21,9 +21,12 @@ dotenv.config({ path: './config/config.env' });
 // Connect to database
 connectDB();
 
-// Route files
+// Route files (test data)
 const bootcamps = require('./routes/bootcamps');
 const courses = require('./routes/courses');
+
+// Route files (actual data)
+const voters = require('./routes/voters');
 const auth = require('./routes/auth');
 const users = require('./routes/users');
 
@@ -71,9 +74,12 @@ app.use(hpp());
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Mount routers
+// Mount routers (test data)
 app.use('/api/v1/bootcamps', bootcamps);
 app.use('/api/v1/courses', courses);
+
+// Mount routers (actual data)
+app.use('/api/v1/voters', voters);
 app.use('/api/v1/auth', auth);
 app.use('/api/v1/users', users);
 
