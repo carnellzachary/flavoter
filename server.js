@@ -27,6 +27,7 @@ const courses = require('./routes/courses');
 
 // Route files (actual data)
 const voters = require('./routes/voters');
+const votes = require('./routes/votes');
 const auth = require('./routes/auth');
 const users = require('./routes/users');
 
@@ -80,6 +81,7 @@ app.use('/api/v1/courses', courses);
 
 // Mount routers (actual data)
 app.use('/api/v1/voters', voters);
+app.use('/api/v1/votes', votes);
 app.use('/api/v1/auth', auth);
 app.use('/api/v1/users', users);
 
