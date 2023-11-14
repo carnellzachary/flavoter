@@ -1,3 +1,4 @@
+const qs = require('qs');
 const path = require('path');
 const ErrorResponse = require('../utils/errorResponse');
 const asyncHandler = require('../middleware/async');
@@ -9,6 +10,9 @@ const Voter = require('../models/Voter');
 // @access  Public
 exports.getVoters = asyncHandler(async (req, res, next) => {  
     let query;
+
+    // Parse query
+    req.query = qs.parse(req._parsedUrl.query);
 
     // Copy req.query
     const reqQuery = { ...req.query };
@@ -26,9 +30,7 @@ exports.getVoters = asyncHandler(async (req, res, next) => {
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
     // Finding resource (populating votes may change with lean)
-    // Add later: .populate('votes') or lean i think
-    query = Voter.find(JSON.parse(queryStr)).populate('votes');
-    // .lean({ virtuals: true })
+    query = Voter.find(JSON.parse(queryStr)).lean({ virtuals: true }).populate('votes');
 
     // Select Fields
     if (req.query.select) {
@@ -46,7 +48,7 @@ exports.getVoters = asyncHandler(async (req, res, next) => {
 
     // Pagination
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 25;
+    const limit = parseInt(req.query.limit, 10) || 500;
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
     const total = await Voter.countDocuments();

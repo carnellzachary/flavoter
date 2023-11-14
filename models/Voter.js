@@ -53,17 +53,14 @@ const VoterSchema = new mongoose.Schema(
       precinctSplit: String,
       precinctSuffix: String
     }
-  }, {
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
   });
 
   // Reverse populate with virtuals
   VoterSchema.virtual('votes', {
-    ref: 'Vote',
-    localField: 'voter_id',
-    foreignField: 'voter_id',
-    justOne: false
+     ref: 'Vote',
+     localField: 'voter_id',
+     foreignField: 'voter_id',
+     justOne: false
   });
 
   // Test lean virtual (replace with vote and geoloc virtuals)
@@ -72,6 +69,6 @@ const VoterSchema = new mongoose.Schema(
   // });
   
   // Now, the `lowercase` property will show up even if you do a lean query
-  //VoterSchema.plugin(mongooseLeanVirtuals);
+  VoterSchema.plugin(mongooseLeanVirtuals);
 
   module.exports = mongoose.model('Voter', VoterSchema);

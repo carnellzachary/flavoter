@@ -1,5 +1,10 @@
+const qs = require('qs');
+
 const advancedResults = (model, populate) => async (req, res, next) => {
     let query;
+
+    // Parse query
+    req.query = qs.parse(req._parsedUrl.query);
 
     // Copy req.query
     const reqQuery = { ...req.query };
