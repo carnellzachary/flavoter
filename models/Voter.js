@@ -53,6 +53,10 @@ const VoterSchema = new mongoose.Schema(
       precinctSplit: String,
       precinctSuffix: String
     }
+  },
+  {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
   });
 
   // Reverse populate with virtuals

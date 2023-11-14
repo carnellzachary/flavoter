@@ -29,8 +29,8 @@ exports.getVoters = asyncHandler(async (req, res, next) => {
     // Create operators ($gt, $gte, etc)
     queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, match => `$${match}`);
 
-    // Finding resource (populating votes may change with lean)
-    query = Voter.find(JSON.parse(queryStr)).lean({ virtuals: true }).populate('votes');
+    // Finding resource
+    query = Voter.find(JSON.parse(queryStr));
 
     // Select Fields
     if (req.query.select) {
@@ -43,17 +43,17 @@ exports.getVoters = asyncHandler(async (req, res, next) => {
         const sortBy = req.query.sort.split(',').join(' ');
         query = query.sort(sortBy);
     } else {
-        query = query.sort('-createdAt');
+        query = query.sort({ 'district.countyCode': 1 });
     }
 
     // Pagination
     const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 500;
+    const limit = parseInt(req.query.limit, 10) || 100;
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const total = await Voter.countDocuments();
+    const total = await Voter.countDocuments(query);
 
-    query = query.skip(startIndex).limit(limit);
+    query = query.skip(startIndex).limit(limit).lean({ virtuals: true }).populate('votes');
 
     // Executing query
     const voters = await query;
@@ -77,7 +77,8 @@ exports.getVoters = asyncHandler(async (req, res, next) => {
 
     res.status(200).json({
         success: true,
-        count: voters.length,
+        totalCount: total,
+        pageCount: voters.length,
         pagination,
         data: voters
     });
