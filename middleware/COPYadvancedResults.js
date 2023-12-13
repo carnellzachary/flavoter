@@ -43,9 +43,8 @@ const advancedResults = (model, populate) => async (req, res, next) => {
     const limit = parseInt(req.query.limit, 10) || 25;
     const startIndex = (page - 1) * limit;
     const endIndex = page * limit;
-    const total = await model.countDocuments(query);
+    const total = await model.countDocuments();
 
-    // Add lean
     query = query.skip(startIndex).limit(limit);
 
     if (populate) {
@@ -75,8 +74,7 @@ const advancedResults = (model, populate) => async (req, res, next) => {
     // Response
     res.advancedResults = {
         success: true,
-        totalCount: total,
-        pageCount: results.length,
+        count: results.length,
         pagination: pagination,
         data: results
     }

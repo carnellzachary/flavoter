@@ -1,18 +1,17 @@
 const mongoose = require('mongoose');
-const mongooseLeanVirtuals = require('mongoose-lean-virtuals');
 const slugify = require('slugify');
-const geocoder = require('../utils/geocoder');
 
 // Add enums, requireds, trims, maxlengths, defaults, etc
 const VoterSchema = new mongoose.Schema(
   {
     voter_id: {
-      type: Number,
+      type: String,
       required: true
     },
     party: String,
     voterStatus: String,
     exempt: String,
+    votes: Array,
     profile: {
       suffix: String,
       firstName: String,
@@ -22,7 +21,7 @@ const VoterSchema = new mongoose.Schema(
       gender: String,
       race: Number
     },
-    location: {
+    address: {
       addr1: String,
       addr2: String,
       city: String,
@@ -52,27 +51,29 @@ const VoterSchema = new mongoose.Schema(
       precinctGroup: String,
       precinctSplit: String,
       precinctSuffix: String
+    },
+    geoloc: {
+      // GeoJSON Point
+      type: {
+        type: String,
+        enum: ['Point']
+      },
+      coordinates: {
+        type: [Number],
+        index: '2dsphere'
+      },
+      matching: String,
+      exactness: String,
+      outputAddress: String,
+      tigerId: String,
+      tigerIdSide: String,
+      countyCode: String,
+      tractCode: String,
+      blockCode: String,
+      streetInput: String,
+      cityInput: String,
+      zipInput: String
     }
-  },
-  {
-    toJSON: { virtuals: true },
-    toObject: { virtuals: true }
   });
 
-  // Reverse populate with virtuals
-  VoterSchema.virtual('votes', {
-     ref: 'Vote',
-     localField: 'voter_id',
-     foreignField: 'voter_id',
-     justOne: false
-  });
-
-  // Test lean virtual (replace with vote and geoloc virtuals)
-  // VoterSchema.virtual('profile.lowercaseLast').get(function() {
-  //   return this.profile.lastName.toLowerCase();
-  // });
-  
-  // Now, the `lowercase` property will show up even if you do a lean query
-  VoterSchema.plugin(mongooseLeanVirtuals);
-
-  module.exports = mongoose.model('Voter', VoterSchema);
+module.exports = mongoose.model('Voter', VoterSchema);

@@ -1,18 +1,30 @@
 const express = require('express');
-const { getVoters, getVoter } = require('../controllers/voters');
+const { getVoters, getVoter, getVotersInRadius, askGPT } = require('../controllers/voters');
 
 const Voter = require('../models/Voter');
 
 const router = express.Router();
 
+const advancedResults = require('../middleware/advancedResults');
 const { protect, authorize } = require('../middleware/auth');
 
 router
     .route('/')
-    .get(getVoters)
+    .get(advancedResults(Voter), getVoters)
+
+
 
 router
-    .route('/:id')
-    .get(getVoter)
+    .route('/radius/:lat/:lng/:distance/:unit')
+    .get(getVotersInRadius);
+
+router
+    .route('/radius/:lat/:lng/:distance')
+    .get(getVotersInRadius);
+
+router
+    .route('/askgpt')
+    .get(askGPT);
+
 
 module.exports = router;
