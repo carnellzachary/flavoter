@@ -1,3 +1,4 @@
+// Developed with help from https://github.com/rpopuc/nl-mongodb-query-builder
 class QueryBuilder {
 
     static async handle(question) {
