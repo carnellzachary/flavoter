@@ -1,7 +1,7 @@
 {
   "name": "flavoter",
   "version": "1.0.0",
-  "description": "Florida Voter Data API",
+  "description": "Nodejs REST API for Florida voter data",
   "main": "server.js",
   "scripts": {
     "start": "NODE_ENV=production node server",
