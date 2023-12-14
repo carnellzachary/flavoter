@@ -11,7 +11,13 @@ const VoterSchema = new mongoose.Schema(
     party: String,
     voterStatus: String,
     exempt: String,
-    votes: Array,
+    votes: {
+      type: Array,
+      countyVotedIn: String,
+      electionDate: String,
+      electionType: String,
+      historyCode: String
+    },
     profile: {
       suffix: String,
       firstName: String,
