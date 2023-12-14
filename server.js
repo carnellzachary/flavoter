@@ -50,7 +50,21 @@ app.use(fileupload());
 app.use(mongoSanitize());
 
 // Set security headers
-app.use(helmet());
+// app.use(helmet());
+
+// Temporary for development
+// Set security headers, including CSP with 'unsafe-inline' for scripts
+app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          // Add other directives as needed
+        },
+      },
+    })
+  );
 
 // Prevent cross-site scripting attacks
 app.use(xss());
