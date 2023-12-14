@@ -1,4 +1,3 @@
-const axios = require('axios');
 const OpenAI = require("openai");
 const qs = require('qs');
 const path = require('path');

@@ -12,18 +12,12 @@ const rateLimit = require('express-rate-limit');
 const hpp = require('hpp');
 const errorHandler = require('./middleware/error');
 const connectDB = require('./config/db');
-// const logger = require('./middleware/logger');
-// Also used CORS package to make public API useable by other domains, but not including that for now
 
 // Load env vars found in the config file (before connecting to database)
 dotenv.config({ path: './config/config.env' });
 
 // Connect to database
 connectDB();
-
-// Route files (test data)
-const bootcamps = require('./routes/bootcamps');
-const courses = require('./routes/courses');
 
 // Route files (actual data)
 const voters = require('./routes/voters');
@@ -74,10 +68,6 @@ app.use(hpp());
 
 // Set static folder
 app.use(express.static(path.join(__dirname, 'public')));
-
-// Mount routers (test data)
-app.use('/api/v1/bootcamps', bootcamps);
-app.use('/api/v1/courses', courses);
 
 // Mount routers (actual data)
 app.use('/api/v1/voters', voters);

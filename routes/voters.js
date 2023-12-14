@@ -12,8 +12,6 @@ router
     .route('/')
     .get(advancedResults(Voter), getVoters)
 
-
-
 router
     .route('/radius/:lat/:lng/:distance/:unit')
     .get(getVotersInRadius);
@@ -26,5 +24,8 @@ router
     .route('/askgpt')
     .get(askGPT);
 
+router
+    .route('/:id')
+    .get(getVoter)
 
 module.exports = router;
