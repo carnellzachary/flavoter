@@ -1,6 +1,6 @@
 class QueryBuilder {
 
-    static async handle(question, errorFeedback) {
+    static async handle(question, errorFeedback, attemptCount) {
         const fs = require('fs');
         const { OpenAIClient, AzureKeyCredential } = require("@azure/openai");
 
@@ -147,8 +147,9 @@ class QueryBuilder {
           };
           */
 
+        const tempLevel = attemptCount > 2 ? 0.7 : 0.1;
         const options = {
-            temperature: 0.1,
+            temperature: tempLevel,
         };
 
         const client = new OpenAIClient(

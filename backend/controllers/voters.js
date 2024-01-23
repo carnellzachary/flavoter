@@ -1,6 +1,7 @@
 const OpenAI = require("openai");
 const qs = require('qs');
 const path = require('path');
+const { jsonrepair } = require('jsonrepair');
 const ErrorResponse = require('../utils/errorResponse');
 const QueryBuilder = require('../utils/queryBuilderAzure');
 const QueryResultWriter = require('../utils/queryResultWriter');
@@ -70,7 +71,7 @@ exports.getVotersInRadius = asyncHandler(async (req, res, next) => {
 // @access  Public
 exports.askGPT = asyncHandler(async (req, res, next) => {
     const question = req.query.question;
-    const maxAttempts = 3; // Three attempts
+    const maxAttempts = 3;
     let attempt = 1;
     let errorFeedback = null;
     let response;
@@ -79,7 +80,7 @@ exports.askGPT = asyncHandler(async (req, res, next) => {
     while (attempt <= maxAttempts) {
         try {
             // Sends the question to GPT to translate it into a query, with optional error feedback
-            response = await QueryBuilder.handle(question, errorFeedback);
+            response = await QueryBuilder.handle(question, errorFeedback, attempt);
            // console.log("Response:", response.function_call.arguments);
 
             //const parsedResponse = JSON.parse(response.toolCalls[0].function.arguments);
@@ -88,10 +89,10 @@ exports.askGPT = asyncHandler(async (req, res, next) => {
 
             queryString = response.content;
 
-            //console.log(queryString);
+            console.log('Query:', queryString);
 
             // Check if it is an actual query or an exception response
-            if (queryString[0] !== '[') {
+            if (queryString[0] !== '[' && queryString[1] !== '{') {
                 return res.status(200).json({
                     success: true,
                     result: queryString
@@ -118,12 +119,6 @@ exports.askGPT = asyncHandler(async (req, res, next) => {
             // Execute the query
             const queryResult = await Voter.aggregate(parsedQuery);
 
-            // Replace answer placeholder with result
-            // const answer = parsedResponse.answer.replace(/{{\w+}}/, result[0][Object.keys(result[0])[0]].toString());
-
-            // Check if result is empty
-            // console.log(result[0][Object.keys(result[0])[0]]);
-
             // If the result is both an array and not empty, return response with result. Otherwise, continue the loop
             if (Array.isArray(queryResult) && queryResult.length) {
                 const queryResultString = JSON.stringify(queryResult);
@@ -131,18 +126,18 @@ exports.askGPT = asyncHandler(async (req, res, next) => {
 
                 return res.status(200).json({
                     success: true,
+                    answer: answerStatement,
                     query: parsedQuery,
                     result: queryResult,
-                    answer: answerStatement,
                 });
             } else {
-                errorFeedback = `For some reason, although the following query did not cause an error, the following query also did not return any results: ${parsedQuery} \n\nThe query was created in response to the following user request: ${question} \n\nPlease evaluate the query and user request so that you can modify the query to effectively return a result, without sacrificing logic and accuracy.`;
+                errorFeedback = `For some reason, although the following query did not cause an error, the following query also did not return any results: ${parsedQuery} \n\nThe query was created in response to the following user request: ${question} \n\nPlease reevaluate the query and the user request so that you can modify the query to effectively return a result that address the user request, without sacrificing logic and accuracy.`;
 
                 attempt++;
             }
 
         } catch (error) {
-            console.error(`Error processing request on attempt #${attempt}:`, error);
+            console.error(`Error processing request on attempt #${attempt}:`.red.underline.bold, error);
             
             errorFeedback = `There was an error caused by a query you generated in response to a user request. \n\n Here's the user request: ${question}. \n\n\ Here's the query that caused an error: ${queryString} \n\n And here's the error message: "${error.message}" \n\nPlease reevaluate the query and construct a new query that addresses the user request, without repeating the same mistakes and causing an error.`;
 
@@ -153,30 +148,52 @@ exports.askGPT = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse('Error processing your request after three attempts', 500));
 }); 
 
-// Checks for ISODates and parses query string
+// Handles ISODates, which are not valid JSON, and parses query string
 function processQueryString(queryString) {
     // Step 1: Replace ISODate() with a placeholder
     const isoDateRegex = /ISODate\("([^"]+)"\)/g;
-    let matches;
-    const dates = [];
+    let match;
+    const replacements = [];
 
-    // Collecting all ISODate strings and replacing them with placeholders
-    while ((matches = isoDateRegex.exec(queryString)) !== null) {
-        dates.push(new Date(matches[1]));
-        queryString = queryString.replace(matches[0], `"ISODatePlaceholder${dates.length - 1}"`);
+    // Collecting all ISODate strings for replacement
+    while ((match = isoDateRegex.exec(queryString)) !== null) {
+        replacements.push({
+            placeholder: `"ISODatePlaceholder${replacements.length}"`,
+            date: new Date(match[1])
+        });
     }
 
+    // Replacing all ISODate instances with placeholders in a single pass
+    replacements.forEach(replacement => {
+        queryString = queryString.replace(/ISODate\("([^"]+)"\)/, replacement.placeholder);
+    });
+
+    // console.log("\nReplaced query string:", queryString);
+
     // Step 2: Parse the modified query string as JSON
-    let query = JSON.parse(queryString);
+    let query;
+    try {
+        query = JSON.parse(queryString);
+    } catch (err) {
+        console.log(`Error parsing query string:`.red.underline.bold + ` ${err}` + `\n\nAttempting to jsonrepair query string...`.yellow);
+
+        try {
+            const repairedQueryString = jsonrepair(queryString);
+            query = JSON.parse(repairedQueryString);
+          } catch (e) {
+            console.error("Failed to parse JSON after repairing:".red.underline.bold, e);
+        }
+    }
 
     // Step 3: Replace placeholders with Date objects
     function replacePlaceholders(value) {
         if (typeof value === 'string' && value.startsWith('ISODatePlaceholder')) {
             const index = parseInt(value.replace('ISODatePlaceholder', ''), 10);
-            return dates[index];
+            return replacements[index].date;
         }
         return value;
     }
+
 
     function deepReplace(object) {
         for (let key in object) {
