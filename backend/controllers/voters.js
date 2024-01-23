@@ -3,6 +3,7 @@ const qs = require('qs');
 const path = require('path');
 const ErrorResponse = require('../utils/errorResponse');
 const QueryBuilder = require('../utils/queryBuilderAzure');
+const QueryResultWriter = require('../utils/queryResultWriter');
 const asyncHandler = require('../middleware/async');
 const Voter = require('../models/Voter');
 
@@ -67,77 +68,13 @@ exports.getVotersInRadius = asyncHandler(async (req, res, next) => {
 // @desc    Use GPT to translate natural language questions into MongoDB queries
 // @route   GET /api/v1/voters/askgpt
 // @access  Public
-/*
 exports.askGPT = asyncHandler(async (req, res, next) => {
     const question = req.query.question;
-    let errorFeedback = null;
-    const maxAttempts = 3;
-    let attempt = 1;
-
-    while (attempt <= 1) {
-        try {
-            // Sends the question to GPT to translate it into a query, with optional error feedback
-            const response = await QueryBuilder.handle(question, errorFeedback);
-
-            console.log(response);
-            const gptResponse = JSON.parse(response);
-            const aggregationPipeline = JSON.parse(gptResponse.content);
-
-            // Define a blacklist of unsafe aggregation operators
-            const unsafeOperators = ['$merge', '$out', '$mergeObjects', '$addFields', '$set', '$unset'];
-
-            // Check if any operator in the pipeline is blacklisted
-            const hasUnsafeOperator = aggregationPipeline.some(stage => {
-                const operator = Object.keys(stage)[0];
-                return unsafeOperators.includes(operator);
-            });
-
-            // Return an error if the query contains a blacklisted operator
-            if (hasUnsafeOperator) {
-                return next(new ErrorResponse('Prohibited aggregation pipeline operator(s) detected', 400));
-            }
-
-            // Execute the query
-            const result = await Voter.aggregate(aggregationPipeline);
-
-            // Data result for natural language answer
-            // const dataResult = extractDataResultFromResponse(result);
-
-            // If execution is successful, break out of the loop
-            return res.status(200).json({
-                success: true,
-                query: aggregationPipeline,
-                result: result
-            });
-
-        } catch (error) {
-            console.error("Error processing request:", error);
-
-            // Check for invalid query parameters
-            const prevQuery = aggregationPipeline ? JSON.stringify(aggregationPipeline, null, 2) : 'N/A';
-            
-            errorFeedback = `There was an error caused by a query you previously generated to answer this prompt: ${question}. Please generate a DIFFERENT query that answers the prompt and DOES NOT repeat the mistakes of the previous query so that it doesn't cause an error. \n\nPrevious Query: ${queryString} \n\nError Message: ${error.message}`;
-
-            // Capture the last query along with the error message for feedback
-            // console.log(`\n --- Attempt #${attempt.toString()} --- \n`.yellow.underline + errorFeedback + "\n");
-
-            attempt++;
-        }
-    }
-
-    return next(new ErrorResponse('Error processing your request', 500));
-});
-*/
-
-exports.askGPT = asyncHandler(async (req, res, next) => {
-    const question = req.query.question;
-    let errorFeedback = null;
-    let aggregationPipeline = null;
     const maxAttempts = 3; // Three attempts
     let attempt = 1;
+    let errorFeedback = null;
     let response;
     let queryString;
-    let processedQueryString;
 
     while (attempt <= maxAttempts) {
         try {
@@ -145,23 +82,23 @@ exports.askGPT = asyncHandler(async (req, res, next) => {
             response = await QueryBuilder.handle(question, errorFeedback);
            // console.log("Response:", response.function_call.arguments);
 
-            const queryString = response.content;
+            //const parsedResponse = JSON.parse(response.toolCalls[0].function.arguments);
 
-            console.log(queryString);
+            //console.log(JSON.parse(response.toolCalls[0].function.arguments));
 
-            // console.log("Query String: " + queryString);
+            queryString = response.content;
 
-            // Process the query string first
-            // processedQueryString = prepareMongoQuery(queryString);
+            //console.log(queryString);
 
-            // Then parse it as JSON
-            // aggregationPipeline = JSON.parse(queryResponse.query);
+            // Check if it is an actual query or an exception response
+            if (queryString[0] !== '[') {
+                return res.status(200).json({
+                    success: true,
+                    result: queryString
+                });
+            }
 
-            // console.log("aggregationPipeline:", aggregationPipeline);
-
-            // const gptAnswer = queryResponse.answer;
-
-            // Check if query string has an ISODate
+            // Check if query string has an ISODate and parse query string
             const parsedQuery = processQueryString(queryString);
 
             // Define a blacklist of unsafe aggregation operators
@@ -179,56 +116,44 @@ exports.askGPT = asyncHandler(async (req, res, next) => {
             }
 
             // Execute the query
-            const result = await Voter.aggregate(parsedQuery);
+            const queryResult = await Voter.aggregate(parsedQuery);
 
-            // Data result for natural language answer
-            // const dataResult = extractDataResultFromResponse(result);
+            // Replace answer placeholder with result
+            // const answer = parsedResponse.answer.replace(/{{\w+}}/, result[0][Object.keys(result[0])[0]].toString());
 
-            // If execution is successful, break out of the loop
-            return res.status(200).json({
-                success: true,
-                query: parsedQuery,
-                result: result
-            });
+            // Check if result is empty
+            // console.log(result[0][Object.keys(result[0])[0]]);
+
+            // If the result is both an array and not empty, return response with result. Otherwise, continue the loop
+            if (Array.isArray(queryResult) && queryResult.length) {
+                const queryResultString = JSON.stringify(queryResult);
+                const answerStatement = await QueryResultWriter.handle(question, queryString, queryResultString);
+
+                return res.status(200).json({
+                    success: true,
+                    query: parsedQuery,
+                    result: queryResult,
+                    answer: answerStatement,
+                });
+            } else {
+                errorFeedback = `For some reason, although the following query did not cause an error, the following query also did not return any results: ${parsedQuery} \n\nThe query was created in response to the following user request: ${question} \n\nPlease evaluate the query and user request so that you can modify the query to effectively return a result, without sacrificing logic and accuracy.`;
+
+                attempt++;
+            }
 
         } catch (error) {
-            console.error("Error processing request:", error);
-
-            // Check for invalid query parameters
-            const prevQuery = aggregationPipeline ? JSON.stringify(aggregationPipeline, null, 2) : 'N/A';
+            console.error(`Error processing request on attempt #${attempt}:`, error);
             
-            errorFeedback = `There was an error caused by a query you previously generated to answer this prompt: ${question}. Please generate a DIFFERENT query that answers the prompt and DOES NOT repeat the mistakes of the previous query so that it doesn't cause an error. \n\nPrevious Query: ${queryString} \n\nError Message: ${error.message}`;
-
-            // Capture the last query along with the error message for feedback
-            // console.log(`\n --- Attempt #${attempt.toString()} --- \n`.yellow.underline + errorFeedback + "\n");
+            errorFeedback = `There was an error caused by a query you generated in response to a user request. \n\n Here's the user request: ${question}. \n\n\ Here's the query that caused an error: ${queryString} \n\n And here's the error message: "${error.message}" \n\nPlease reevaluate the query and construct a new query that addresses the user request, without repeating the same mistakes and causing an error.`;
 
             attempt++;
         }
     }
 
-    return next(new ErrorResponse('Error processing your request', 500));
+    return next(new ErrorResponse('Error processing your request after three attempts', 500));
 }); 
 
-function extractDataResultFromResponse(arr) {
-    let dataResult = null;
-
-    if (Array.isArray(arr) && arr.length > 0) {
-        const firstItem = arr[0];
-        if (typeof firstItem === 'object') {
-            for (const key in firstItem) {
-                if (Object.hasOwnProperty.call(firstItem, key)) {
-                    if (typeof firstItem[key] === 'number' || typeof firstItem[key] === 'string') {
-                        dataResult = firstItem[key];
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    return dataResult;
-}
-
+// Checks for ISODates and parses query string
 function processQueryString(queryString) {
     // Step 1: Replace ISODate() with a placeholder
     const isoDateRegex = /ISODate\("([^"]+)"\)/g;
@@ -267,76 +192,3 @@ function processQueryString(queryString) {
 
     return query;
 }
-
-function extractQueryString(res) {
-    const queryRegex = /"query": "\[(.*)\]",/;
-    const match = res.match(queryRegex);
-
-    if (match && match[1]) {
-        // Convert the string back to JSON format
-        const queryString = match[1].replace(/\\/g, "");
-        
-        return JSON.stringify(`[${queryString}]`);
-    } else {
-        console.error("Query string not found in the response");
-        return null;
-    }
-}
-
-function checkForSpecificParams(prompt, queryString, errMsg) {
-    const parametersToCheck = [
-        { parameter: "ISODate", warning: `There was an error caused by a query you generated to answer this prompt: ${prompt} \n\nThe query includes the 'ISODate' function within the query itself, which results in invalid JSON when returned by the ChatGPT API. For context, here's the query that caused the error: ${queryString} \n\nAnd here's the error message: ${errMsg} \n\nPlease convert dates into proper ISODate format BEFORE including them in the query you generate so that the query validates as JSON.` }
-    ];
-
-    for (const paramObj of parametersToCheck) {
-        const regex = new RegExp(paramObj.parameter + '\\((.*?)\\)');
-        if (regex.test(queryString)) {
-            return paramObj.warning;
-        }
-    }
-
-    return null; // Add this line to explicitly return null if no specific params are found
-}
-
-function prepareMongoQuery(queryString) {
-    // Check if the query string contains 'ISODate'
-    if (queryString.includes('ISODate')) {
-        // Replace ISODate with a placeholder and store the date strings
-        let isoDateMatches = [];
-        let processedQuery = queryString.replace(/ISODate\('([^']+)'\)/g, (match, isoDate) => {
-            isoDateMatches.push(isoDate);
-            return '"ISODate_PLACEHOLDER"';
-        });
-
-        // Parse the JSON
-        let parsedQuery;
-        try {
-            parsedQuery = JSON.parse(processedQuery);
-        } catch (error) {
-            console.error("Error parsing query string:", error);
-            throw error;
-        }
-
-        // Function to recursively replace placeholders with actual Date objects
-        function restoreISODate(obj) {
-            for (let key in obj) {
-                if (typeof obj[key] === 'string' && obj[key] === 'ISODate_PLACEHOLDER') {
-                    let dateStr = isoDateMatches.shift();
-                    obj[key] = new Date(dateStr);
-                } else if (typeof obj[key] === 'object') {
-                    restoreISODate(obj[key]);
-                }
-            }
-        }
-
-        // Replace the placeholders in the parsed query
-        restoreISODate(parsedQuery);
-
-        return parsedQuery;
-    } else {
-        // If ISODate is not found, return the original query
-        return JSON.parse(queryString); // Ensure this is parsed as JSON if no ISODate is present
-    }
-}
-
-

@@ -4,9 +4,11 @@ class QueryBuilder {
         const fs = require('fs');
         const { OpenAIClient, AzureKeyCredential } = require("@azure/openai");
 
-        const system_instructions = fs.readFileSync(__dirname + '/../templates/gpt-rules.template', 'utf-8');
+        const dateToday = new Date().toISOString();
+
+        const system_instructions = fs.readFileSync(__dirname + '/../templates/queryBuilderRules.template', 'utf-8').replace("<THE DATE TODAY>", dateToday);        
         const messages = [
-            { role: 'system', content: system_instructions },
+            { role: "system", content: system_instructions },
             {
                 "role": "user",
                 "content": "How many voters live in Miami?"
@@ -109,6 +111,45 @@ class QueryBuilder {
             messages.push({ role: 'user', content: "Now I have a different request: " + question });
         }
 
+        // Function: Natural language response that incorpartes data result into a sentence
+       /* const dataResultSentence = {
+            name: "data_result_sentence",
+            description: "Write a natural language statement that incorparates the query result into a complete sentence that answers the user request.",
+            parameters: {
+              type: "object",
+              properties: {
+                query: {
+                  type: "string",
+                  description: "The MongoDB aggregation query generated in response to the user request",
+                },
+                titles: {
+                    type: "object",
+                    description: "A map of field names to titles to present the results",
+                    properties: {
+                        field: {
+                            type: "string",
+                        },
+                        title: {
+                            type: "string",
+                        },
+                        type: {
+                            type: "string",
+                        }
+                    },
+                },
+                answer: {
+                    type: "string",
+                    description: "A natural language statement that answers the user request with a complete sentence that includes placeholders for the query results. Sometimes, there may be one results. Other times, there may be multiple results. The answer must account for this",
+                },
+              },
+              required: ["query", "answer", "titles"],
+            },
+          };
+          */
+
+        const options = {
+            temperature: 0.1,
+        };
 
         const client = new OpenAIClient(
             "https://openai-flavoter-west.openai.azure.com/", 
@@ -116,7 +157,8 @@ class QueryBuilder {
           );
       
           try {
-              const response = await client.getChatCompletions("gpt-4-1106", messages);
+              const response = await client.getChatCompletions("gpt-4-1106", messages, options);
+
               const { choices } = response;
               for (const choice of choices) {
                   return choice.message;
