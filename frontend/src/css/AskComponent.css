@@ -1,0 +1,167 @@
+.ask-column {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 20px;
+}
+
+.input-container {
+	display: flex;
+	align-items: center;
+	width: 100%;
+	height: 45px;
+	margin-bottom: 10px;
+}
+
+.input-container input {
+	flex-grow: 1; /* Allow the input to expand to fill available space */
+	width: auto; /* Reset width to auto to allow flexible sizing */
+	height: 100%; /* Match the height of the container */
+	padding: 5px; /* Keep padding for internal spacing */
+	border-radius: 6px 0px 0px 6px; /* Match the textarea border radius */
+	border: 1px solid #ccc; /* Assuming you want a border, adjust as needed */
+}
+
+.submit-button {
+	height: 100%;
+	max-width: 45px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: #0d6efd;
+	color: #fff;
+	border: none;
+	border-radius: 0px 6px 6px 0px;
+	padding: 5px 10px;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+}
+
+.submit-button:hover {
+	background-color: #0b5ed7;
+}
+
+.submit-button svg {
+	width: 25px; /* Adjust the width to your preference */
+	height: 25px; /* Adjust the height to your preference */
+	color: #fff;
+}
+
+.submit-button.loading {
+	background-color: #d7e6ff; /* Change the background color when loading */
+	cursor: not-allowed; /* Disable cursor when loading */
+	padding: 5px 10px; /* Match the padding of the submit button */
+}
+
+.submit-button.loading:hover {
+	background-color: #d7e6ff !important; /* Change the background color when loading */
+}
+
+.response-area {
+	width: 100%;
+	margin-top: 10px;
+	text-align: left;
+}
+
+.answer {
+	background-color: #f3f3f3;
+	padding: 10px;
+	margin-bottom: 10px;
+}
+
+.query {
+	background-color: #e9ecef;
+	padding: 10px;
+	white-space: pre; /* To maintain formatting of the query */
+	overflow-x: auto; /* In case of overflow */
+	text-align: left;
+}
+
+/* Query Styles */
+.hljs-attr {
+	color: rgb(197, 43, 43);
+}
+
+.Typewriter {
+	margin-bottom: 10px !important;
+}
+
+/* Spinner Styles */
+:root {
+	--loader-width: 32px;
+	--loader-height: 32px;
+	--loader-color-primary: #27ae60;
+	--loader-color-secondary: #eee;
+	--line-width: 1.8px;
+	--animation-duration: 1.1s;
+	--loader-initial-scale: 0.1;
+}
+.loader,
+.loader:before,
+.loader:after {
+	box-sizing: border-box;
+	flex-grow: 0;
+	flex-shrink: 0;
+}
+/*
+In order to get optimal results, please only change the 
+variables above and don't change anything in the actual loader code
+*/
+
+@keyframes momentum {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(-360deg);
+	}
+}
+
+.loader.quantum-spinner {
+	--primary-circle-offset: calc(
+		((var(--loader-width, 100px) * 0.2) / 2) - var(--line-width, 4px)
+	);
+	--secondary-circle-offset: calc(
+		((var(--loader-width, 100px) * 0.4) / 2) - var(--line-width, 4px)
+	); /*- (var(--line-width,4px) * 2)*/
+	position: relative;
+	width: var(--loader-width, 100px);
+	height: var(--loader-height, 100px);
+	transform-origin: center center;
+	border-radius: 50%;
+	border: var(--line-width, 4px) solid rgba(0, 0, 0, 0);
+	border-top-color: var(--loader-color-primary, #33f);
+	animation: momentum var(--animation-duration, 1s) linear infinite;
+}
+
+.quantum-spinner:before {
+	content: '';
+	position: absolute;
+	transform-origin: center center;
+	top: var(--primary-circle-offset, 10px);
+	left: var(--primary-circle-offset, 10px);
+	width: calc(var(--loader-width, 100px) * 0.8);
+	height: calc(var(--loader-height, 100px) * 0.8);
+	border-radius: 50%;
+	border: var(--line-width, 4px) solid rgba(0, 0, 0, 0);
+	border-top-color: var(--loader-color-primary, #33f);
+	opacity: 0.7;
+	filter: hue-rotate(3eg);
+	animation: momentum calc(var(--animation-duration, 1s) * 2) linear infinite;
+}
+
+.quantum-spinner:after {
+	content: '';
+	position: absolute;
+	top: var(--secondary-circle-offset, 20px);
+	left: var(--secondary-circle-offset, 20px);
+	width: calc(var(--loader-width, 100px) * 0.6);
+	height: calc(var(--loader-height, 100px) * 0.6);
+	border-radius: 50%;
+	transform-origin: center center;
+	border: var(--line-width, 4px) solid rgba(0, 0, 0, 0);
+	border-top-color: var(--loader-color-primary, #33f);
+	opacity: 0.3;
+	filter: hue-rotate(6eg);
+	animation: momentum var(--animation-duration, 1s) linear infinite;
+}

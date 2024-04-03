@@ -1,0 +1,31 @@
+/*
+.main-layout {
+	display: flex;
+	height: 100vh;
+}
+*/
+
+.main-layout {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	height: 100vh;
+}
+
+.ask-column {
+	max-width: 600px;
+	margin: auto;
+}
+
+.column {
+	flex: 1;
+	border: 1px solid #ddd;
+	text-align: center;
+	padding: 20px;
+}
+
+@media (max-width: 600px) {
+	.main-layout {
+		flex-direction: column;
+	}
+}
